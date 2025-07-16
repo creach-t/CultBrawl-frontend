@@ -5,7 +5,7 @@ import { Provider as PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { UserProvider, useUser } from '../context/UserContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Header from './header';
+import Header from './Header';
 import { MessageProvider } from '../context/MessageContext';
 import { HapticTab } from '@/components/HapticTab';
 import { IconSymbol } from '@/components/ui/IconSymbol';
