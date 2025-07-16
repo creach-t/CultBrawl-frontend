@@ -12,7 +12,6 @@ export default function Header() {
   const { message } = useMessage();
   const [menuVisible, setMenuVisible] = useState(false);
   const [messageOpacity] = useState(new Animated.Value(0));
-  const userIconRef = useRef(null);
 
   const handleLogout = async () => {
     try {
@@ -41,6 +40,13 @@ export default function Header() {
   const truncateUsername = (username) => {
     return username.length > 15 ? `${username.substring(0, 15)}...` : username;
   };
+
+  // Rafraîchir les informations utilisateur si nécessaire
+  React.useEffect(() => {
+    if (user && !user.points && user.points !== 0) {
+      refreshUser();
+    }
+  }, [user]);
 
   if (message) {
     Animated.timing(messageOpacity, {
@@ -73,42 +79,38 @@ export default function Header() {
                 <Text style={styles.points}>{user.points || 0}</Text>
               </View>
             </View>
-            <TouchableOpacity
-              ref={userIconRef}
-              onPress={handleProfilePress}
-              style={styles.userIconContainer}
+            
+            <Menu
+              visible={menuVisible}
+              onDismiss={() => setMenuVisible(false)}
+              anchor={
+                <TouchableOpacity
+                  onPress={handleProfilePress}
+                  style={styles.userIconContainer}
+                >
+                  <MaterialCommunityIcons name="account-circle" size={40} color="#fff" />
+                </TouchableOpacity>
+              }
+              contentStyle={styles.menuContent}
             >
-              <MaterialCommunityIcons name="account-circle" size={40} color="#fff" />
-            </TouchableOpacity>
+              <Menu.Item 
+                onPress={handleAccountPress} 
+                title="Mon Compte"
+                leadingIcon="account"
+              />
+              <Divider />
+              <Menu.Item 
+                onPress={handleLogout} 
+                title="Se Déconnecter"
+                leadingIcon="logout"
+                titleStyle={styles.logoutText}
+              />
+            </Menu>
           </View>
         )}
 
         {!user && (
           <Appbar.Action icon="account-circle" onPress={handleProfilePress} />
-        )}
-
-        {user && (
-          <Menu
-            visible={menuVisible}
-            onDismiss={() => setMenuVisible(false)}
-            anchor={
-              <View style={styles.menuAnchor} />
-            }
-            contentStyle={styles.menuContent}
-          >
-            <Menu.Item 
-              onPress={handleAccountPress} 
-              title="Mon Compte"
-              leadingIcon="account"
-            />
-            <Divider />
-            <Menu.Item 
-              onPress={handleLogout} 
-              title="Se Déconnecter"
-              leadingIcon="logout"
-              titleStyle={styles.logoutText}
-            />
-          </Menu>
         )}
       </Appbar.Header>
 
@@ -165,19 +167,11 @@ const styles = StyleSheet.create({
   userIconContainer: {
     padding: 4,
   },
-  menuAnchor: {
-    position: 'absolute',
-    top: 0,
-    right: 16,
-    width: 40,
-    height: 40,
-  },
   menuContent: {
-    marginTop: 50,
-    marginRight: 16,
     backgroundColor: '#fff',
     borderRadius: 8,
     elevation: 8,
+    marginTop: 8,
   },
   logoutText: {
     color: '#d32f2f',
