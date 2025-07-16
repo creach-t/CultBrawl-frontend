@@ -1,22 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Appbar, Menu, Divider } from 'react-native-paper';
 import { useUser } from '../context/UserContext';
 import { useMessage } from '../context/MessageContext';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Text, View, StyleSheet, Animated, Easing } from 'react-native';
+import { Text, View, StyleSheet, Animated, Easing, TouchableOpacity } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 export default function Header() {
-  const { user, setUser } = useUser();
+  const { user, setUser, refreshUser } = useUser();
   const { message } = useMessage();
   const [menuVisible, setMenuVisible] = useState(false);
   const [messageOpacity] = useState(new Animated.Value(0));
+  const userIconRef = useRef(null);
 
   const handleLogout = async () => {
     try {
       await AsyncStorage.removeItem('user');
       setUser(null);
+      setMenuVisible(false);
       router.push('/auth');
     } catch (error) {
       console.error('Erreur lors de la déconnexion:', error);
@@ -31,9 +33,21 @@ export default function Header() {
     }
   };
 
+  const handleAccountPress = () => {
+    setMenuVisible(false);
+    router.push('/account');
+  };
+
   const truncateUsername = (username) => {
     return username.length > 15 ? `${username.substring(0, 15)}...` : username;
   };
+
+  // Rafraîchir les informations utilisateur si nécessaire
+  React.useEffect(() => {
+    if (user && !user.points && user.points !== 0) {
+      refreshUser();
+    }
+  }, [user]);
 
   if (message) {
     Animated.timing(messageOpacity, {
@@ -63,10 +77,16 @@ export default function Header() {
               <Text style={styles.username}>{truncateUsername(user.username)}</Text>
               <View style={styles.pointsContainer}>
                 <MaterialCommunityIcons name="diamond-stone" size={16} color="#fff" />
-                <Text style={styles.points}>{user.points}</Text>
+                <Text style={styles.points}>{user.points || 0}</Text>
               </View>
             </View>
-            <MaterialCommunityIcons name="account-circle" size={40} color="#fff" onPress={handleProfilePress} />
+            <TouchableOpacity
+              ref={userIconRef}
+              onPress={handleProfilePress}
+              style={styles.userIconContainer}
+            >
+              <MaterialCommunityIcons name="account-circle" size={40} color="#fff" />
+            </TouchableOpacity>
           </View>
         )}
 
@@ -78,11 +98,23 @@ export default function Header() {
           <Menu
             visible={menuVisible}
             onDismiss={() => setMenuVisible(false)}
-            anchor={<Text />}
+            anchor={
+              <View style={styles.menuAnchor} />
+            }
+            contentStyle={styles.menuContent}
           >
-            <Menu.Item onPress={() => router.push('/account')} title="Mon Compte" />
+            <Menu.Item 
+              onPress={handleAccountPress} 
+              title="Mon Compte"
+              leadingIcon="account"
+            />
             <Divider />
-            <Menu.Item onPress={handleLogout} title="Se Déconnecter" />
+            <Menu.Item 
+              onPress={handleLogout} 
+              title="Se Déconnecter"
+              leadingIcon="logout"
+              titleStyle={styles.logoutText}
+            />
           </Menu>
         )}
       </Appbar.Header>
@@ -118,7 +150,7 @@ const styles = StyleSheet.create({
   },
   userDetails: {
     flexDirection: 'column',
-    marginLeft: 10,
+    marginRight: 8,
     justifyContent: 'center',
   },
   username: {
@@ -136,6 +168,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     marginLeft: 4,
+  },
+  userIconContainer: {
+    padding: 4,
+  },
+  menuAnchor: {
+    position: 'absolute',
+    top: 0,
+    right: 16,
+    width: 40,
+    height: 40,
+  },
+  menuContent: {
+    marginTop: 50,
+    marginRight: 16,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    elevation: 8,
+  },
+  logoutText: {
+    color: '#d32f2f',
   },
   messageContainer: {
     position: 'absolute',
