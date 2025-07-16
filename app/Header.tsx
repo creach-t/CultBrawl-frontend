@@ -42,13 +42,6 @@ export default function Header() {
     return username.length > 15 ? `${username.substring(0, 15)}...` : username;
   };
 
-  // Rafraîchir les informations utilisateur si nécessaire
-  React.useEffect(() => {
-    if (user && !user.points && user.points !== 0) {
-      refreshUser();
-    }
-  }, [user]);
-
   if (message) {
     Animated.timing(messageOpacity, {
       toValue: 1,
