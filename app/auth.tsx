@@ -101,16 +101,25 @@ export default function AuthScreen() {
         value={username}
         onChangeText={setUsername}
         autoCapitalize="none"
+        returnKeyType="next"
+        onSubmitEditing={() => {
+          // Focus sur le champ mot de passe
+          this.passwordInput?.focus();
+        }}
+        blurOnSubmit={false}
       />
 
       <View style={styles.passwordContainer}>
         <TextInput
+          ref={(input) => { this.passwordInput = input; }}
           style={styles.passwordInput}
           placeholder="Mot de passe"
           value={password}
           onChangeText={setPassword}
           secureTextEntry={!showPassword}
           autoCapitalize="none"
+          returnKeyType="go"
+          onSubmitEditing={handleLogin}
         />
         <TouchableOpacity
           onPress={() => setShowPassword(!showPassword)}
