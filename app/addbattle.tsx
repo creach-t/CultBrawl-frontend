@@ -42,7 +42,7 @@ export default function AddBattle() {
   const fetchEntities = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/entity');
+      const response = await api.get('/entities');
       setEntities(response);
     } catch (error) {
       console.error('Erreur lors de la récupération des entités :', error);
@@ -69,7 +69,7 @@ export default function AddBattle() {
     }
 
     try {
-      await api.post('/battle', {
+      await api.post('/battles', {
         entity1Id: selectedEntities[0].id,
         entity2Id: selectedEntities[1].id,
         durationHours: 1,

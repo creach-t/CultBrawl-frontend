@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ImageBackground, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../services/api';
-import { useUser } from '../context/UserContext';
 
 const CardBattle = ({ battle, user }) => {
   const [votes, setVotes] = useState({ entity1Votes: 0, entity2Votes: 0 });
@@ -18,23 +17,27 @@ const CardBattle = ({ battle, user }) => {
 
   const fetchVotes = async () => {
     try {
-      const response = await api.get(`/battle/${battle.id}/votes`);
+      const response = await api.get(`battles/${battle.id}/votes`);
       const entity1Votes = response.entity1Votes;
       const entity2Votes = response.entity2Votes;
       setVotes({ entity1Votes, entity2Votes });
 
-      const userVote = await api.get(`/battle/${battle.id}/user-vote`);
-      setHasVoted(userVote.hasVoted);
+      if (user?.id) {
+        const userVote = await api.get(`/battles/${battle.id}/user-vote`, { params: { userId: user.id } });
+        setHasVoted(userVote.hasVoted);
+      } else {
+        setHasVoted(false);
+      }
     } catch (error) {
       console.error('Erreur lors de la récupération des votes :', error);
     }
   };
 
   const handleVote = async (entityId) => {
-    if (voting || battle.status !== 'pending') return;
+    if (!user?.id || voting || battle.status !== 'pending') return;
     setVoting(true);
     try {
-      await api.post(`/battle/${battle.id}/vote`, { votedEntityId: entityId, userId: user?.id });
+      await api.post(`/battles/${battle.id}/votes`, { votedEntityId: entityId, userId: user.id });
       setHasVoted(true);
       fetchVotes();
     } catch (error) {
@@ -72,33 +75,35 @@ const CardBattle = ({ battle, user }) => {
   return (
     <View style={styles.card}>
       <View style={styles.statusContainer}>
+        <Text style={styles.voteText}>
+          {votes.entity1Votes} ({entity1Percentage}%)
+        </Text>
         <Text style={[styles.status, { backgroundColor: battle.status === 'pending' ? '#4caf50' : '#f44336' }]}>
           {timeRemaining}
         </Text>
+        <Text style={styles.voteText}>
+          {votes.entity2Votes} ({entity2Percentage}%)
+        </Text>
       </View>
-
-      {showResults && (
-        <View style={styles.percentageBackground}>
-          <View
-            style={[
-              styles.percentageBar,
-              { backgroundColor: '#4caf50', flex: entity1Percentage / 100 },
-            ]}
-          />
-          <View
-            style={[
-              styles.percentageBar,
-              { backgroundColor: '#f44336', flex: entity2Percentage / 100 },
-            ]}
-          />
-        </View>
-      )}
-
+      <View style={styles.backgroundBar}>
+        <View
+          style={[
+            styles.backgroundSide,
+            { flex: entity1Percentage / 100, backgroundColor: '#4caf50' },
+          ]}
+        />
+        <View
+          style={[
+            styles.backgroundSide,
+            { flex: entity2Percentage / 100, backgroundColor: '#f44336' },
+          ]}
+        />
+      </View>
       <View style={styles.voteContainer}>
         <TouchableOpacity
           style={styles.voteSide}
           onPress={() => handleVote(battle.participants[0].id)}
-          disabled={showResults}
+          disabled={showResults || !user?.id}
         >
           <ImageBackground
             source={{ uri: battle.participants[0].imageUrl }}
@@ -112,7 +117,7 @@ const CardBattle = ({ battle, user }) => {
         <TouchableOpacity
           style={styles.voteSide}
           onPress={() => handleVote(battle.participants[1].id)}
-          disabled={showResults}
+          disabled={showResults || !user?.id}
         >
           <ImageBackground
             source={{ uri: battle.participants[1].imageUrl }}
@@ -123,24 +128,15 @@ const CardBattle = ({ battle, user }) => {
           </ImageBackground>
         </TouchableOpacity>
       </View>
-
-      {showResults && (
-        <View style={styles.percentageContainer}>
-          <Text style={styles.percentage}>{entity1Percentage}%</Text>
-          <Ionicons name="swap-horizontal" size={24} color="#555" />
-          <Text style={styles.percentage}>{entity2Percentage}%</Text>
-        </View>
-      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#fff',
     borderRadius: 10,
     marginVertical: 10,
-    padding: 10,
+    overflow: 'hidden',
     elevation: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -148,7 +144,10 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   statusContainer: {
-    marginBottom: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 10,
+    alignItems: 'center',
   },
   status: {
     paddingVertical: 5,
@@ -159,28 +158,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
   },
-  percentageBackground: {
-    flexDirection: 'row',
-    height: 30,
-    borderRadius: 5,
-    overflow: 'hidden',
-    marginVertical: 10,
+  voteText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333',
   },
-  percentageBar: {
+  backgroundBar: {
+    flexDirection: 'row',
+    height: 20,
+  },
+  backgroundSide: {
     height: '100%',
   },
   voteContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    overflow: 'hidden',
-    borderRadius: 10,
-    marginTop: 10,
   },
   voteSide: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 10,
   },
   imageBackground: {
     width: '100%',
@@ -203,18 +200,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     padding: 5,
     borderRadius: 5,
-  },
-  percentageContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 10,
-    paddingHorizontal: 20,
-  },
-  percentage: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#555',
   },
 });
 

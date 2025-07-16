@@ -52,7 +52,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setIsAuthenticated(false);
       }
     } catch (error) {
-      console.error('Erreur lors de la vérification du statut d\\'authentification:', error);
+      console.error('Erreur lors de la vérification du statut d\'authentification:', error);
       setUser(null);
       setIsAuthenticated(false);
     } finally {
@@ -65,7 +65,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Stocker le token et les données utilisateur
       await AsyncStorage.setItem('auth_token', token);
       await AsyncStorage.setItem('user_data', JSON.stringify(userData));
-      
+
       setUser(userData);
       setIsAuthenticated(true);
     } catch (error) {

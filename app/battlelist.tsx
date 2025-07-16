@@ -1,12 +1,11 @@
-import React, { useState } from 'react';
-import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
-import { router } from 'expo-router';
-import api from '../services/api';
-import { Ionicons } from '@expo/vector-icons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { useUser } from '../context/UserContext';
 import { useFocusEffect } from '@react-navigation/native';
+import { router } from 'expo-router';
+import React, { useState } from 'react';
+import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import CardBattle from '../components/cardBattle';
+import { useUser } from '../context/UserContext';
+import api from '../services/api';
 
 interface Battle {
   id: number;
@@ -36,7 +35,7 @@ export default function BattleList() {
 
   const fetchBattles = async () => {
     try {
-      const response = await api.get('/battle');
+      const response = await api.get('/battles');
       setBattles(response);
     } catch (error) {
       console.error('Erreur lors de la récupération des battles :', error);
@@ -51,7 +50,7 @@ export default function BattleList() {
       fetchBattles(); // Initial fetch on focus
 
       const interval = setInterval(() => {
-        
+
         console.log(`${new Date()} Mise à jour automatique de la liste des battles...`);
         fetchBattles(); // Récupération périodique
       }, 10000); // Intervalle défini (par ex. 10 secondes)
