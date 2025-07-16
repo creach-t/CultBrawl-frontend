@@ -23,6 +23,7 @@ interface Battle {
   endDate: string;
   entity1Id: number;
   entity2Id: number;
+  winnerId?: number;
   Entity1?: Entity;
   Entity2?: Entity;
 }
@@ -37,7 +38,6 @@ interface BattleCardProps {
 
 const { width } = Dimensions.get('window');
 const cardWidth = width - 32;
-const imageWidth = (cardWidth - 60) / 2;
 
 const BattleCard: React.FC<BattleCardProps> = ({
   battle,
@@ -86,11 +86,166 @@ const BattleCard: React.FC<BattleCardProps> = ({
     }
   };
 
+  // Déterminer les dimensions d'image selon le type d'entité
+  const getImageDimensions = (entityType: string) => {
+    const baseWidth = (cardWidth - 60) / 2;
+    switch (entityType) {
+      case 'movie':
+        // Format poster de film (2:3)
+        return {
+          width: baseWidth,
+          height: baseWidth * 1.5,
+          borderRadius: 12
+        };
+      case 'book':
+        // Format livre (3:4)
+        return {
+          width: baseWidth,
+          height: baseWidth * 1.33,
+          borderRadius: 8
+        };
+      case 'serie':
+      case 'anime':
+        // Format série/anime (16:9)
+        return {
+          width: baseWidth,
+          height: baseWidth * 0.75,
+          borderRadius: 10
+        };
+      case 'game':
+        // Format jeu (carré ou légèrement rectangulaire)
+        return {
+          width: baseWidth,
+          height: baseWidth * 1.1,
+          borderRadius: 10
+        };
+      default:
+        // Format par défaut (carré)
+        return {
+          width: baseWidth,
+          height: baseWidth,
+          borderRadius: 12
+        };
+    }
+  };
+
+  const getEntityTypeIcon = (entityType: string) => {
+    switch (entityType) {
+      case 'movie':
+        return '🎬';
+      case 'book':
+        return '📚';
+      case 'serie':
+        return '📺';
+      case 'anime':
+        return '🎌';
+      case 'game':
+        return '🎮';
+      default:
+        return '❓';
+    }
+  };
+
+  const getEntityTypeLabel = (entityType: string) => {
+    switch (entityType) {
+      case 'movie':
+        return 'Film';
+      case 'book':
+        return 'Livre';
+      case 'serie':
+        return 'Série';
+      case 'anime':
+        return 'Anime';
+      case 'game':
+        return 'Jeu';
+      default:
+        return 'Autre';
+    }
+  };
+
   const isActive = battle.status === 'active';
+  const isCompleted = battle.status === 'completed';
   const endDate = new Date(battle.endDate);
   const now = new Date();
   const timeRemaining = endDate.getTime() - now.getTime();
   const hoursRemaining = Math.max(0, Math.floor(timeRemaining / (1000 * 60 * 60)));
+
+  // Déterminer le gagnant
+  const isEntity1Winner = isCompleted && battle.winnerId === Entity1?.id;
+  const isEntity2Winner = isCompleted && battle.winnerId === Entity2?.id;
+
+  const renderEntityCard = (entity: Entity | undefined, isWinner: boolean) => {
+    if (!entity) return null;
+
+    const imageDimensions = getImageDimensions(entity.type);
+    const entityTypeIcon = getEntityTypeIcon(entity.type);
+    const entityTypeLabel = getEntityTypeLabel(entity.type);
+
+    return (
+      <View style={[styles.entityContainer, isWinner && styles.winnerContainer]}>
+        {/* Badge de gagnant */}
+        {isWinner && (
+          <View style={styles.winnerBadge}>
+            <Text style={styles.winnerBadgeText}>🏆 GAGNANT</Text>
+          </View>
+        )}
+        
+        <View style={[styles.imageContainer, imageDimensions, isWinner && styles.winnerImageContainer]}>
+          {entity.imageUrl ? (
+            <Image
+              source={{ uri: entity.imageUrl }}
+              style={[styles.entityImage, imageDimensions]}
+              resizeMode="cover"
+            />
+          ) : (
+            <LinearGradient
+              colors={
+                entity.type === 'movie' ? ['#E91E63', '#F06292'] :
+                entity.type === 'book' ? ['#8BC34A', '#AED581'] :
+                entity.type === 'serie' ? ['#2196F3', '#64B5F6'] :
+                entity.type === 'anime' ? ['#FF5722', '#FF8A65'] :
+                entity.type === 'game' ? ['#9C27B0', '#BA68C8'] :
+                ['#607D8B', '#90A4AE']
+              }
+              style={[styles.placeholderImage, imageDimensions]}
+            >
+              <Text style={styles.placeholderText}>
+                {entity.name?.charAt(0) || '?'}
+              </Text>
+            </LinearGradient>
+          )}
+          
+          {userVote?.votedEntityId === entity.id && (
+            <View style={styles.voteBadge}>
+              <Text style={styles.voteBadgeText}>✓</Text>
+            </View>
+          )}
+        </View>
+        
+        <View style={styles.entityInfo}>
+          <Text style={[styles.entityName, isWinner && styles.winnerEntityName]} numberOfLines={2}>
+            {entity.name}
+          </Text>
+          
+          <View style={styles.entityTypeContainer}>
+            <Text style={styles.entityTypeIcon}>{entityTypeIcon}</Text>
+            <Text style={styles.entityType}>{entityTypeLabel}</Text>
+          </View>
+        </View>
+        
+        {showVoting && isActive && (
+          <VoteButton
+            battleId={battle.id}
+            entityId={entity.id}
+            entityName={entity.name}
+            onVoteSuccess={handleVoteSuccess}
+            onVoteChange={handleVoteChange}
+            style={styles.voteButton}
+          />
+        )}
+      </View>
+    );
+  };
 
   return (
     <TouchableOpacity
@@ -98,7 +253,7 @@ const BattleCard: React.FC<BattleCardProps> = ({
       disabled={!onPress}
       activeOpacity={0.7}
     >
-      <Card style={[styles.container, style]}>
+      <Card style={[styles.container, style, isCompleted && styles.completedContainer]}>
         <Card.Content>
           {/* Header */}
           <View style={styles.header}>
@@ -119,60 +274,25 @@ const BattleCard: React.FC<BattleCardProps> = ({
                 {hoursRemaining}h restantes
               </Text>
             )}
+            
+            {isCompleted && battle.winnerId && (
+              <View style={styles.completedHeader}>
+                <Text style={styles.completedText}>
+                  🏆 Victoire de {battle.winnerId === Entity1?.id ? Entity1.name : Entity2?.name}!
+                </Text>
+              </View>
+            )}
           </View>
 
           {/* Entities Display */}
           <View style={styles.entitiesContainer}>
             {/* Entity 1 */}
-            <View style={styles.entityContainer}>
-              <View style={styles.imageContainer}>
-                {Entity1?.imageUrl ? (
-                  <Image
-                    source={{ uri: Entity1.imageUrl }}
-                    style={styles.entityImage}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <LinearGradient
-                    colors={['#E91E63', '#F06292']}
-                    style={styles.placeholderImage}
-                  >
-                    <Text style={styles.placeholderText}>
-                      {Entity1?.name?.charAt(0) || '?'}
-                    </Text>
-                  </LinearGradient>
-                )}
-                {userVote?.votedEntityId === Entity1?.id && (
-                  <View style={styles.voteBadge}>
-                    <Text style={styles.voteBadgeText}>✓</Text>
-                  </View>
-                )}
-              </View>
-              
-              <Text style={styles.entityName} numberOfLines={2}>
-                {Entity1?.name || 'Entité 1'}
-              </Text>
-              
-              <Text style={styles.entityType}>
-                {Entity1?.type || 'Type'}
-              </Text>
-              
-              {showVoting && isActive && (
-                <VoteButton
-                  battleId={battle.id}
-                  entityId={Entity1?.id || 0}
-                  entityName={Entity1?.name || 'Entité 1'}
-                  onVoteSuccess={handleVoteSuccess}
-                  onVoteChange={handleVoteChange}
-                  style={styles.voteButton}
-                />
-              )}
-            </View>
+            {renderEntityCard(Entity1, isEntity1Winner)}
 
             {/* VS Separator */}
             <View style={styles.vsContainer}>
               <LinearGradient
-                colors={['#FF6B6B', '#4ECDC4']}
+                colors={isCompleted ? ['#FFD700', '#FFA500'] : ['#FF6B6B', '#4ECDC4']}
                 style={styles.vsCircle}
               >
                 <Text style={styles.vsText}>VS</Text>
@@ -180,50 +300,7 @@ const BattleCard: React.FC<BattleCardProps> = ({
             </View>
 
             {/* Entity 2 */}
-            <View style={styles.entityContainer}>
-              <View style={styles.imageContainer}>
-                {Entity2?.imageUrl ? (
-                  <Image
-                    source={{ uri: Entity2.imageUrl }}
-                    style={styles.entityImage}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <LinearGradient
-                    colors={['#2196F3', '#64B5F6']}
-                    style={styles.placeholderImage}
-                  >
-                    <Text style={styles.placeholderText}>
-                      {Entity2?.name?.charAt(0) || '?'}
-                    </Text>
-                  </LinearGradient>
-                )}
-                {userVote?.votedEntityId === Entity2?.id && (
-                  <View style={styles.voteBadge}>
-                    <Text style={styles.voteBadgeText}>✓</Text>
-                  </View>
-                )}
-              </View>
-              
-              <Text style={styles.entityName} numberOfLines={2}>
-                {Entity2?.name || 'Entité 2'}
-              </Text>
-              
-              <Text style={styles.entityType}>
-                {Entity2?.type || 'Type'}
-              </Text>
-              
-              {showVoting && isActive && (
-                <VoteButton
-                  battleId={battle.id}
-                  entityId={Entity2?.id || 0}
-                  entityName={Entity2?.name || 'Entité 2'}
-                  onVoteSuccess={handleVoteSuccess}
-                  onVoteChange={handleVoteChange}
-                  style={styles.voteButton}
-                />
-              )}
-            </View>
+            {renderEntityCard(Entity2, isEntity2Winner)}
           </View>
 
           {/* Description */}
@@ -253,6 +330,11 @@ const styles = StyleSheet.create({
     elevation: 6,
     borderRadius: 16,
     backgroundColor: '#FFFFFF',
+  },
+  completedContainer: {
+    borderWidth: 2,
+    borderColor: '#FFD700',
+    elevation: 8,
   },
   header: {
     marginBottom: 20,
@@ -284,23 +366,63 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
   },
+  completedHeader: {
+    backgroundColor: '#FFF8E1',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#FFD700',
+  },
+  completedText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#F57C00',
+    textAlign: 'center',
+  },
   entitiesContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 16,
   },
   entityContainer: {
     flex: 1,
     alignItems: 'center',
     gap: 8,
+    position: 'relative',
+  },
+  winnerContainer: {
+    backgroundColor: '#FFF8E1',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#FFD700',
+  },
+  winnerBadge: {
+    position: 'absolute',
+    top: -8,
+    left: '50%',
+    transform: [{ translateX: -40 }],
+    backgroundColor: '#FFD700',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    zIndex: 10,
+  },
+  winnerBadgeText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#333',
   },
   imageContainer: {
     position: 'relative',
-    width: imageWidth,
-    height: imageWidth,
-    borderRadius: 12,
     overflow: 'hidden',
     elevation: 3,
+  },
+  winnerImageContainer: {
+    borderWidth: 3,
+    borderColor: '#FFD700',
+    elevation: 6,
   },
   entityImage: {
     width: '100%',
@@ -333,6 +455,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
   },
+  entityInfo: {
+    alignItems: 'center',
+    minHeight: 60,
+  },
   entityName: {
     fontSize: 16,
     fontWeight: '600',
@@ -340,10 +466,23 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     minHeight: 40,
   },
+  winnerEntityName: {
+    color: '#F57C00',
+    fontWeight: 'bold',
+  },
+  entityTypeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  entityTypeIcon: {
+    fontSize: 14,
+  },
   entityType: {
     fontSize: 12,
     color: '#666',
-    textTransform: 'capitalize',
+    fontWeight: '500',
   },
   voteButton: {
     marginTop: 8,
@@ -351,6 +490,7 @@ const styles = StyleSheet.create({
   vsContainer: {
     alignItems: 'center',
     marginHorizontal: 16,
+    marginTop: 40,
   },
   vsCircle: {
     width: 50,
