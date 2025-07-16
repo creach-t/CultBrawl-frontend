@@ -12,6 +12,17 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import TabBarBackground from '@/components/ui/TabBarBackground';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { blue } from 'react-native-reanimated/lib/typescript/Colors';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 2, // Réessaye deux fois avant de renvoyer une erreur
+      refetchOnWindowFocus: false, // Ne recharge pas automatiquement lorsque la fenêtre est réactivée
+    },
+  },
+});
 
 // Layout principal avec contexte et provider
 export default function RootLayout() {
@@ -20,7 +31,9 @@ export default function RootLayout() {
       <PaperProvider>
         <UserProvider>
           <MessageProvider>
-            <RootWithTabs />
+            <QueryClientProvider client={queryClient}>
+                <RootWithTabs />
+            </QueryClientProvider>
           </MessageProvider>
         </UserProvider>
       </PaperProvider>
@@ -69,7 +82,7 @@ function RootWithTabs() {
       <Header />  {/* L'en-tête est affiché en permanence */}
       <Tabs
         screenOptions={{
-          tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+          tabBarActiveTintColor: 'blue',
           headerShown: false,
           tabBarButton: HapticTab,
           tabBarBackground: TabBarBackground,

@@ -1,16 +1,16 @@
+import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
-  View,
+  ActivityIndicator,
+  FlatList,
+  Image,
+  StyleSheet,
   Text,
   TextInput,
-  Image,
-  FlatList,
-  StyleSheet,
   TouchableOpacity,
-  ActivityIndicator,
+  View,
 } from 'react-native';
 import api from '../services/api';
-import { Ionicons } from '@expo/vector-icons';
 
 interface Movie {
   imdbID: string;
@@ -45,7 +45,7 @@ export default function EntityList() {
   const addEntity = async (movie: Movie) => {
     setAdding(movie.imdbID);
     try {
-      const response = await api.post('/entity', {
+      const response = await api.post('/entities', {
         name: movie.Title + ' (' + movie.Year + ')',
         apiId: movie.imdbID,
         type: 'movie',
@@ -84,7 +84,7 @@ export default function EntityList() {
       </TouchableOpacity>
     </View>
   );
-  
+
 
   return (
     <View style={styles.container}>
