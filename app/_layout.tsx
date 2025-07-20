@@ -59,6 +59,8 @@ function RootWithTabs() {
     { name: 'addmovie', title: 'Add Movie', icon: 'leaderboard.tab', visible: false },
     { name: 'addentity', title: 'Add Entity', icon: 'leaderboard.tab', visible: false },
     { name: 'addbattle', title: 'Add Battle', icon: 'leaderboard.tab', visible: false },
+    { name: 'Header', title: 'Header', icon: 'leaderboard.tab', visible: false },
+    { name: 'battle-detail', title: 'Battle Detail', icon: 'leaderboard.tab', visible: false },
   ];
 
   useEffect(() => {
