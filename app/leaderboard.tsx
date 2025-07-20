@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, ActivityIndicator, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import api from '../services/api';
 import { useFocusEffect } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, FlatList, Image, StyleSheet, Text, View } from 'react-native';
+import api from '../services/api';
 
 export default function Leaderboard() {
   const [userLeaderboard, setUserLeaderboard] = useState([]);
@@ -11,8 +11,8 @@ export default function Leaderboard() {
 
   const fetchLeaderboard = async () => {
     try {
-      const userResponse = await api.get('/user/leaderboard');
-      const entityResponse = await api.get('/entity/leaderboard');
+      const userResponse = await api.get('/users/leaderboard');
+      const entityResponse = await api.get('/entities/leaderboard');
       setUserLeaderboard(userResponse);
       setEntityLeaderboard(entityResponse);
     } catch (error) {
@@ -28,12 +28,12 @@ export default function Leaderboard() {
     useFocusEffect(
       React.useCallback(() => {
         fetchLeaderboard(); // Initial fetch on focus
-  
+
         const interval = setInterval(() => {
           console.log('Mise à jour automatique du leaderboard...');
           fetchLeaderboard(); // Récupération périodique
         }, 10000); // Intervalle défini (par ex. 10 secondes)
-  
+
         return () => clearInterval(interval); // Nettoyage de l'intervalle lorsque la page perd le focus
       }, [])
     );
