@@ -5,16 +5,13 @@ import { Provider as PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { UserProvider, useUser } from '../context/UserContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Header from './Header';
+import Header from './header';
 import { MessageProvider } from '../context/MessageContext';
 import { HapticTab } from '@/components/HapticTab';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import TabBarBackground from '@/components/ui/TabBarBackground';
-import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { blue } from 'react-native-reanimated/lib/typescript/Colors';
-
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -59,7 +56,6 @@ function RootWithTabs() {
     { name: 'addmovie', title: 'Add Movie', icon: 'leaderboard.tab', visible: false },
     { name: 'addentity', title: 'Add Entity', icon: 'leaderboard.tab', visible: false },
     { name: 'addbattle', title: 'Add Battle', icon: 'leaderboard.tab', visible: false },
-    { name: 'Header', title: 'Header', icon: 'leaderboard.tab', visible: false },
     { name: 'battle-detail', title: 'Battle Detail', icon: 'leaderboard.tab', visible: false },
   ];
 
