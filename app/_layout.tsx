@@ -10,11 +10,8 @@ import { MessageProvider } from '../context/MessageContext';
 import { HapticTab } from '@/components/HapticTab';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import TabBarBackground from '@/components/ui/TabBarBackground';
-import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { blue } from 'react-native-reanimated/lib/typescript/Colors';
-
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -59,6 +56,7 @@ function RootWithTabs() {
     { name: 'addmovie', title: 'Add Movie', icon: 'leaderboard.tab', visible: false },
     { name: 'addentity', title: 'Add Entity', icon: 'leaderboard.tab', visible: false },
     { name: 'addbattle', title: 'Add Battle', icon: 'leaderboard.tab', visible: false },
+    { name: 'battle-detail', title: 'Battle Detail', icon: 'leaderboard.tab', visible: false },
   ];
 
   useEffect(() => {

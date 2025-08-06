@@ -11,6 +11,7 @@ type User = {
   lastname?: string;
   imageUrl?: string;
   roleId?: number;
+  points?: number;
 } | null;
 
 type UserContextType = {
@@ -39,12 +40,27 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
       if (parsedUser?.token) {
         try {
-          const userInfo = await api.get('/user');
-          setUser({ ...userInfo, token: parsedUser.token });
+          // Correction de l'URL : /users au lieu de /user
+          const userInfo = await api.get('/users');
+          
+          // Fusionner les informations récupérées avec le token existant
+          const updatedUser = { 
+            ...userInfo, 
+            token: parsedUser.token,
+            points: userInfo.points || 0 // S'assurer que les points sont définis
+          };
+          
+          setUser(updatedUser);
+          
+          // Mettre à jour le stockage local avec les nouvelles informations
+          await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
         } catch (error) {
-          console.error('Erreur API:', error);
-          setUser(null);
-          await AsyncStorage.removeItem('user');
+          console.error('Erreur API lors de la récupération des informations utilisateur:', error);
+          // En cas d'erreur API, on garde l'utilisateur stocké localement mais on ajoute les points à 0
+          setUser({
+            ...parsedUser,
+            points: parsedUser.points || 0
+          });
         }
       } else {
         setUser(null);

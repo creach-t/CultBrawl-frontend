@@ -3,7 +3,9 @@ import { View, StyleSheet, Alert } from 'react-native';
 import { Button, Card, Text, ActivityIndicator } from 'react-native-paper';
 import { voteService, Vote } from '../services/voteService';
 import { useAuth } from '../context/AuthContext';
-import Toast from 'react-native-toast-message';
+import { useUser } from '../context/UserContext';
+import { useToast } from '../hooks/useToast';
+import Toast from './Toast';
 
 interface VoteButtonProps {
   battleId: number;
@@ -25,9 +27,11 @@ const VoteButton: React.FC<VoteButtonProps> = ({
   style
 }) => {
   const { user } = useAuth();
+  const { refreshUser } = useUser();
   const [isLoading, setIsLoading] = useState(false);
   const [currentVote, setCurrentVote] = useState<Vote | null>(null);
   const [hasVoted, setHasVoted] = useState(false);
+  const { toast, showSuccess, showError, hideToast } = useToast();
 
   useEffect(() => {
     checkExistingVote();
@@ -48,11 +52,7 @@ const VoteButton: React.FC<VoteButtonProps> = ({
 
   const handleVote = async () => {
     if (!user?.id) {
-      Toast.show({
-        type: 'error',
-        text1: 'Authentification requise',
-        text2: 'Vous devez être connecté pour voter'
-      });
+      showError('Vous devez être connecté pour voter');
       return;
     }
 
@@ -84,17 +84,12 @@ const VoteButton: React.FC<VoteButtonProps> = ({
       onVoteSuccess?.(response.data);
       onVoteChange?.(response.data);
 
-      Toast.show({
-        type: 'success',
-        text1: 'Vote enregistré !',
-        text2: `Vous avez voté pour ${entityName}`
-      });
+      // Rafraîchir les données utilisateur pour récupérer les nouveaux points
+      await refreshUser();
+
+      showSuccess(`🎉 Vote enregistré pour ${entityName}! +10 points gagnés!`);
     } catch (error: any) {
-      Toast.show({
-        type: 'error',
-        text1: 'Erreur',
-        text2: error.message || 'Impossible d\'enregistrer votre vote'
-      });
+      showError(error.message || 'Impossible d\'enregistrer votre vote');
     } finally {
       setIsLoading(false);
     }
@@ -124,17 +119,12 @@ const VoteButton: React.FC<VoteButtonProps> = ({
       onVoteSuccess?.(response.data);
       onVoteChange?.(response.data);
 
-      Toast.show({
-        type: 'success',
-        text1: 'Vote modifié !',
-        text2: `Vous avez changé votre vote pour ${entityName}`
-      });
+      // Rafraîchir les données utilisateur
+      await refreshUser();
+
+      showSuccess(`✅ Vote modifié pour ${entityName}!`);
     } catch (error: any) {
-      Toast.show({
-        type: 'error',
-        text1: 'Erreur',
-        text2: error.message || 'Impossible de modifier votre vote'
-      });
+      showError(error.message || 'Impossible de modifier votre vote');
     } finally {
       setIsLoading(false);
     }
@@ -162,17 +152,12 @@ const VoteButton: React.FC<VoteButtonProps> = ({
       setHasVoted(false);
       onVoteChange?.(null);
 
-      Toast.show({
-        type: 'success',
-        text1: 'Vote supprimé',
-        text2: 'Votre vote a été supprimé'
-      });
+      // Rafraîchir les données utilisateur
+      await refreshUser();
+
+      showSuccess('🗑️ Vote supprimé');
     } catch (error: any) {
-      Toast.show({
-        type: 'error',
-        text1: 'Erreur',
-        text2: error.message || 'Impossible de supprimer votre vote'
-      });
+      showError(error.message || 'Impossible de supprimer votre vote');
     } finally {
       setIsLoading(false);
     }
@@ -184,26 +169,35 @@ const VoteButton: React.FC<VoteButtonProps> = ({
   const buttonText = isVotedFor ? 'Voté' : (hasVoted ? 'Changer' : 'Voter');
 
   return (
-    <View style={[styles.container, style]}>
-      <Button
-        mode={buttonMode}
-        icon={isLoading ? undefined : buttonIcon}
-        onPress={handleVote}
-        disabled={disabled || isLoading}
-        style={[
-          styles.button,
-          isVotedFor && styles.votedButton
-        ]}
-        contentStyle={styles.buttonContent}
-        labelStyle={styles.buttonLabel}
-      >
-        {isLoading ? (
-          <ActivityIndicator size="small" color="white" />
-        ) : (
-          buttonText
-        )}
-      </Button>
-    </View>
+    <>
+      <View style={[styles.container, style]}>
+        <Button
+          mode={buttonMode}
+          icon={isLoading ? undefined : buttonIcon}
+          onPress={handleVote}
+          disabled={disabled || isLoading}
+          style={[
+            styles.button,
+            isVotedFor && styles.votedButton
+          ]}
+          contentStyle={styles.buttonContent}
+          labelStyle={styles.buttonLabel}
+        >
+          {isLoading ? (
+            <ActivityIndicator size="small" color="white" />
+          ) : (
+            buttonText
+          )}
+        </Button>
+      </View>
+      
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        visible={toast.visible}
+        onHide={hideToast}
+      />
+    </>
   );
 };
 
