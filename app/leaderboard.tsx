@@ -1,185 +1,238 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import {
+  ActivityIndicator,
+  Image,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import api from '../services/api';
 
-export default function Leaderboard() {
-  const [userLeaderboard, setUserLeaderboard] = useState([]);
-  const [entityLeaderboard, setEntityLeaderboard] = useState([]);
-  const [loading, setLoading] = useState(true);
+const MEDALS = ['🥇', '🥈', '🥉'];
 
-  const fetchLeaderboard = async () => {
+const PODIUM_COLORS: [string, string][] = [
+  ['#FFD700', '#FFF176'],
+  ['#C0C0C0', '#E8E8E8'],
+  ['#CD7F32', '#FFCC80'],
+];
+const DEFAULT_COLORS: [string, string] = ['#ffffff', '#f5f5f5'];
+
+export default function Leaderboard() {
+  const [userLeaderboard, setUserLeaderboard] = useState<any[]>([]);
+  const [entityLeaderboard, setEntityLeaderboard] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchLeaderboard = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
     try {
-      const userResponse = await api.get('/users/leaderboard');
-      const entityResponse = await api.get('/entities/leaderboard');
-      setUserLeaderboard(userResponse);
-      setEntityLeaderboard(entityResponse);
+      const [userRes, entityRes] = await Promise.all([
+        api.get('/users/leaderboard'),
+        api.get('/entities/leaderboard'),
+      ]);
+      setUserLeaderboard(Array.isArray(userRes) ? userRes : []);
+      setEntityLeaderboard(Array.isArray(entityRes) ? entityRes : []);
     } catch (error) {
-      console.error('Erreur lors de la récupération du leaderboard :', error);
+      console.error('Erreur leaderboard:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  };
-  useEffect(() => {
-    fetchLeaderboard();
   }, []);
 
-    useFocusEffect(
-      React.useCallback(() => {
-        fetchLeaderboard(); // Initial fetch on focus
-
-        const interval = setInterval(() => {
-          console.log('Mise à jour automatique du leaderboard...');
-          fetchLeaderboard(); // Récupération périodique
-        }, 10000); // Intervalle défini (par ex. 10 secondes)
-
-        return () => clearInterval(interval); // Nettoyage de l'intervalle lorsque la page perd le focus
-      }, [])
-    );
-
-  const renderUserItem = ({ item, index }) => (
-    <LinearGradient
-      colors={index === 0 ? ['#ffd700', '#ffdb4d'] : ['#ffffff', '#f0f0f0']}
-      style={styles.item}
-    >
-      <Text style={[styles.rank, index === 0 && styles.firstPlaceRank]}>
-        {index + 1}
-      </Text>
-      <Text style={[styles.name, index === 0 && styles.firstPlaceName]}>
-        {item.username}
-      </Text>
-      <Text style={styles.points}>{item.points} pts</Text>
-    </LinearGradient>
-  );
-
-  const renderEntityItem = ({ item, index }) => (
-    <LinearGradient
-      colors={index === 0 ? ['#ffd700', '#fff170'] : ['#ffffff', '#f0f0f0']}
-      style={styles.item}
-    >
-      <Image source={{ uri: item.imageUrl }} style={styles.entityImage} />
-      <View style={styles.entityInfo}>
-        <Text style={[styles.name, index === 0 && styles.firstPlaceName]}>
-          {item.name}
-        </Text>
-        <Text style={styles.points}>{item.votes} votes</Text>
-      </View>
-    </LinearGradient>
+  useFocusEffect(
+    useCallback(() => {
+      fetchLeaderboard();
+    }, [fetchLeaderboard])
   );
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#6200ee" />
-        <Text>Chargement du leaderboard...</Text>
+        <Text style={styles.loadingText}>Chargement…</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Leaderboard</Text>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={() => fetchLeaderboard(true)}
+          colors={['#6200ee']}
+          tintColor="#6200ee"
+        />
+      }
+    >
+      <Text style={styles.pageTitle}>🏆 Leaderboard</Text>
+      <Text style={styles.hint}>Tirez vers le bas pour actualiser</Text>
 
-      <Text style={styles.sectionTitle}>Top Players</Text>
+      {/* Top Players */}
+      <Text style={styles.sectionTitle}>Top Joueurs</Text>
       {userLeaderboard.length > 0 ? (
-        <FlatList
-          data={userLeaderboard}
-          renderItem={renderUserItem}
-          keyExtractor={(item) => item.id.toString()}
-        />
+        userLeaderboard.map((item, index) => (
+          <LinearGradient
+            key={item.id}
+            colors={index < 3 ? PODIUM_COLORS[index] : DEFAULT_COLORS}
+            style={styles.item}
+          >
+            <Text style={styles.medal}>
+              {index < 3 ? MEDALS[index] : String(index + 1)}
+            </Text>
+            <Text style={[styles.name, index < 3 && styles.topName]} numberOfLines={1}>
+              {item.username}
+            </Text>
+            <View style={styles.scoreBadge}>
+              <Text style={styles.scoreText}>{item.points} pts</Text>
+            </View>
+          </LinearGradient>
+        ))
       ) : (
-        <Text style={styles.emptyMessage}>No classed Player yet.</Text>
+        <Text style={styles.emptyMessage}>Aucun joueur classé.</Text>
       )}
 
-      <Text style={styles.sectionTitle}>Top Entity</Text>
+      {/* Top Entities */}
+      <Text style={styles.sectionTitle}>Top Entités</Text>
       {entityLeaderboard.length > 0 ? (
-        <FlatList
-          data={entityLeaderboard}
-          renderItem={renderEntityItem}
-          keyExtractor={(item) => item.id.toString()}
-        />
+        entityLeaderboard.map((item, index) => (
+          <LinearGradient
+            key={item.id}
+            colors={index < 3 ? PODIUM_COLORS[index] : DEFAULT_COLORS}
+            style={styles.item}
+          >
+            {item.imageUrl ? (
+              <Image source={{ uri: item.imageUrl }} style={styles.entityImage} />
+            ) : (
+              <Text style={styles.medal}>
+                {index < 3 ? MEDALS[index] : String(index + 1)}
+              </Text>
+            )}
+            <View style={styles.entityInfo}>
+              <Text style={[styles.name, index < 3 && styles.topName]} numberOfLines={1}>
+                {item.name}
+              </Text>
+              {item.category && (
+                <Text style={styles.entityCategory}>{item.category}</Text>
+              )}
+            </View>
+            <View style={styles.scoreBadge}>
+              <Text style={styles.scoreText}>{item.votes} votes</Text>
+            </View>
+          </LinearGradient>
+        ))
       ) : (
-        <Text style={styles.emptyMessage}>No classed Entity yet.</Text>
+        <Text style={styles.emptyMessage}>Aucune entité classée.</Text>
       )}
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f4f4f8',
+  },
+  content: {
+    padding: 16,
+    paddingBottom: 40,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    gap: 12,
   },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginBottom: 20,
+  loadingText: {
+    fontSize: 15,
+    color: '#888',
+  },
+  pageTitle: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#1a1a2e',
     textAlign: 'center',
-    color: '#333',
+    marginBottom: 4,
+  },
+  hint: {
+    fontSize: 12,
+    color: '#aaa',
+    textAlign: 'center',
+    marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginVertical: 20,
+    fontSize: 16,
+    fontWeight: '700',
     color: '#6200ee',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 10,
+    marginTop: 12,
   },
   item: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 10,
+    padding: 14,
+    borderRadius: 12,
+    marginBottom: 8,
+    elevation: 2,
     shadowColor: '#000',
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.07,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
-    elevation: 2,
   },
-  rank: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#6200ee',
-    width: 30,
+  medal: {
+    fontSize: 22,
+    width: 38,
     textAlign: 'center',
   },
-  firstPlaceRank: {
-    color: '#ffd700',
-  },
   name: {
-    fontSize: 18,
+    fontSize: 15,
     flex: 1,
     marginLeft: 10,
-    color: '#333',
+    color: '#555',
   },
-  firstPlaceName: {
-    color: '#000',
-    fontWeight: 'bold',
+  topName: {
+    fontWeight: '700',
+    color: '#1a1a2e',
   },
-  points: {
-    fontSize: 18,
-    fontWeight: '600',
+  scoreBadge: {
+    backgroundColor: 'rgba(0,0,0,0.09)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  scoreText: {
+    fontSize: 13,
+    fontWeight: '700',
     color: '#333',
   },
   entityImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 15,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
   entityInfo: {
     flex: 1,
+    marginLeft: 10,
+  },
+  entityCategory: {
+    fontSize: 11,
+    color: '#999',
+    marginTop: 1,
   },
   emptyMessage: {
     textAlign: 'center',
-    marginVertical: 10,
-    color: '#888',
+    marginVertical: 16,
+    color: '#bbb',
     fontStyle: 'italic',
+    fontSize: 14,
   },
 });

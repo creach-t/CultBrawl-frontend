@@ -13,7 +13,7 @@ const MAPPING = {
   'battle.tab' : 'sword-cross',
   'entity.tab': 'accessibility',
   'leaderboard.tab': 'trophy',
-  'account.tab ': 'account-circle',
+  'account.tab': 'account-circle',
   
 } as Partial<
   Record<

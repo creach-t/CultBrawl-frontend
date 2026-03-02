@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Appbar, Menu, Divider } from 'react-native-paper';
 import { useUser } from '../context/UserContext';
 import { useMessage } from '../context/MessageContext';
+import { useIsAdmin } from '../hooks/useIsAdmin';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Text, View, StyleSheet, Animated, Easing, TouchableOpacity } from 'react-native';
@@ -10,6 +11,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 export default function Header() {
   const { user, setUser, refreshUser } = useUser();
   const { message } = useMessage();
+  const isAdmin = useIsAdmin();
   const [menuVisible, setMenuVisible] = useState(false);
   const [messageOpacity] = useState(new Animated.Value(0));
 
@@ -73,7 +75,12 @@ export default function Header() {
         {user && (
           <View style={styles.userInfo}>
             <View style={styles.userDetails}>
-              <Text style={styles.username}>{truncateUsername(user.username)}</Text>
+              <View style={styles.usernameRow}>
+                {isAdmin && (
+                  <MaterialCommunityIcons name="crown" size={14} color="#FFD700" style={styles.crownIcon} />
+                )}
+                <Text style={styles.username}>{truncateUsername(user.username)}</Text>
+              </View>
               <View style={styles.pointsContainer}>
                 <MaterialCommunityIcons name="diamond-stone" size={16} color="#fff" />
                 <Text style={styles.points}>{user.points || 0}</Text>
@@ -147,6 +154,14 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     marginRight: 8,
     justifyContent: 'center',
+  },
+  usernameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  crownIcon: {
+    marginBottom: 1,
   },
   username: {
     color: '#fff',
