@@ -59,10 +59,11 @@ Le backend renvoie les batailles dans ce format depuis `GET /api/battles` :
 ## Composants principaux
 
 ### `cardBattle.tsx` (utilisé dans battlelist)
-- Props : `battle` (format API), `user` (depuis UserContext)
+- Props : `battle` (format API), `user` (depuis UserContext), `isAdmin` (bool), `onDelete` (callback)
 - Gère le vote via `POST /battles/:id/votes`
 - Affiche les stats via `GET /battles/:id/votes`
 - Vérifie si l'utilisateur a voté via `GET /battles/:id/user-vote`
+- Bouton delete visible si `isAdmin === true` (corbeille en haut à droite)
 
 ### `VoteButton.tsx`
 - Props : `battleId`, `entityId`, `entityName`, `onVoteSuccess`, `onVoteChange`
@@ -93,9 +94,34 @@ const { user, setUser, refreshUser } = useUser();
 
 ---
 
+## Hooks custom
+
+- `hooks/useIsAdmin.ts` : retourne `user?.roleId === 2` depuis le UserContext
+
+---
+
+## Gestion des dialogues de confirmation (multi-plateforme)
+
+Sur web, `Alert.alert` avec plusieurs boutons est silencieux (bug React Native Web).
+**Toujours utiliser ce pattern** pour les actions destructives :
+
+```ts
+if (Platform.OS === 'web') {
+  if (window.confirm('Confirmer ?')) doAction();
+} else {
+  Alert.alert('Titre', 'Message', [
+    { text: 'Annuler', style: 'cancel' },
+    { text: 'Confirmer', style: 'destructive', onPress: doAction },
+  ]);
+}
+```
+
+---
+
 ## Points d'attention
 
 - **baseURL hardcodée** dans `services/api.js` → changer l'IP pour chaque environnement
+- **`roleId` doit être stocké** au login dans AsyncStorage pour que `useIsAdmin` fonctionne
 - **Deux composants bataille** : `cardBattle.tsx` (actif) et `BattleCard.tsx` (avancé, non utilisé dans battlelist) — ne pas supprimer BattleCard sans vérifier toutes les imports
 - Le rafraîchissement automatique de battlelist est de **30 secondes** (`setInterval` dans `useFocusEffect`)
 - JWT stocké dans AsyncStorage — expiration 1h sans refresh
