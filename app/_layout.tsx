@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Platform } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import { Provider as PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { UserProvider, useUser } from '../context/UserContext';
@@ -10,18 +10,17 @@ import { MessageProvider } from '../context/MessageContext';
 import { HapticTab } from '@/components/HapticTab';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import TabBarBackground from '@/components/ui/TabBarBackground';
-import { useColorScheme } from '@/hooks/useColorScheme';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 2, // Réessaye deux fois avant de renvoyer une erreur
-      refetchOnWindowFocus: false, // Ne recharge pas automatiquement lorsque la fenêtre est réactivée
+      retry: 2,
+      refetchOnWindowFocus: false,
     },
   },
 });
 
-// Layout principal avec contexte et provider
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
@@ -29,7 +28,7 @@ export default function RootLayout() {
         <UserProvider>
           <MessageProvider>
             <QueryClientProvider client={queryClient}>
-                <RootWithTabs />
+              <RootWithTabs />
             </QueryClientProvider>
           </MessageProvider>
         </UserProvider>
@@ -38,70 +37,78 @@ export default function RootLayout() {
   );
 }
 
-// Rendu des onglets avec Header intégré
-function RootWithTabs() {
-  const { user, setUser } = useUser();
-  const [loading, setLoading] = useState(true);
-  const colorScheme = useColorScheme();
+const VISIBLE_TABS = [
+  { name: 'index', title: 'Accueil', icon: 'home.tab' as const },
+  { name: 'battlelist', title: 'Battles', icon: 'battle.tab' as const },
+  { name: 'leaderboard', title: 'Classement', icon: 'leaderboard.tab' as const },
+  { name: 'account', title: 'Compte', icon: 'account.tab' as const },
+];
 
-  const allowedScreens = [
-    { name: 'index', title: 'Home', icon: 'home.tab', visible: true },
-    { name: 'battlelist', title: 'Battles', icon: 'battle.tab', visible: true },
-    { name: 'entitylist', title: 'Entity', icon: 'entity.tab', visible: false },
-    { name: 'account', title: 'Account', icon: 'account.tab', visible: false },
-    { name: 'auth', title: 'Login', icon: 'account.circle', visible: false },
-    { name: 'signup', title: 'Register', icon: 'account.circle', visible: false },
-    { name: 'header', title: 'Battle', icon: 'battle.tab', visible: false },
-    { name: 'leaderboard', title: 'Leaderboard', icon: 'leaderboard.tab', visible: true },
-    { name: 'addmovie', title: 'Add Movie', icon: 'leaderboard.tab', visible: false },
-    { name: 'addentity', title: 'Add Entity', icon: 'leaderboard.tab', visible: false },
-    { name: 'addbattle', title: 'Add Battle', icon: 'leaderboard.tab', visible: false },
-    { name: 'battle-detail', title: 'Battle Detail', icon: 'leaderboard.tab', visible: false },
-  ];
+const HIDDEN_ROUTES = [
+  'entitylist',
+  'auth',
+  'signup',
+  'header',
+  'addmovie',
+  'addentity',
+  'addbattle',
+  'battle-detail',
+];
+
+function RootWithTabs() {
+  const { setUser } = useUser();
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const checkUser = async () => {
-      const storedUser = await AsyncStorage.getItem('user');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      }
+    AsyncStorage.getItem('user').then((storedUser) => {
+      if (storedUser) setUser(JSON.parse(storedUser));
       setLoading(false);
-    };
-
-    checkUser();
+    });
   }, []);
 
-  if (loading) {
-    return null;  // Empêche l'affichage prématuré
-  }
+  if (loading) return null;
 
   return (
     <>
-      <Header />  {/* L'en-tête est affiché en permanence */}
+      <Header />
       <Tabs
         screenOptions={{
-          tabBarActiveTintColor: 'blue',
+          tabBarActiveTintColor: '#6200ee',
+          tabBarInactiveTintColor: '#9e9e9e',
           headerShown: false,
           tabBarButton: HapticTab,
           tabBarBackground: TabBarBackground,
-          tabBarStyle: Platform.select({
-            ios: {
-              position: 'absolute', // Blur sur iOS
-            },
-            default: {},
-          }),
-        }}>
-        {allowedScreens.map((screen) => (
+          tabBarStyle: {
+            borderTopWidth: StyleSheet.hairlineWidth,
+            borderTopColor: '#e0e0e0',
+            ...Platform.select({
+              ios: { position: 'absolute' },
+              default: { elevation: 8 },
+            }),
+          },
+          tabBarLabelStyle: {
+            fontSize: 11,
+            fontWeight: '600',
+          },
+        }}
+      >
+        {VISIBLE_TABS.map((tab) => (
           <Tabs.Screen
-            key={screen.name}
-            name={screen.name}
+            key={tab.name}
+            name={tab.name}
             options={{
-              ...(screen.visible ? {} : { href: null }),  // Ajoute href: null seulement si visible est false
-              title: screen.title,
+              title: tab.title,
               tabBarIcon: ({ color }) => (
-                <IconSymbol size={28} name={screen.icon} color={color} />
+                <IconSymbol size={26} name={tab.icon} color={color} />
               ),
             }}
+          />
+        ))}
+        {HIDDEN_ROUTES.map((name) => (
+          <Tabs.Screen
+            key={name}
+            name={name}
+            options={{ href: null }}
           />
         ))}
       </Tabs>
